@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBT Ujian ANBK - BRIJ Academy</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- MathJax CDN untuk Render LaTeX / Notasi Matematika Tegak & Pecahan -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        /* Hide Scrollbar untuk daftar nomor soal */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col justify-between select-none">
+
+    <!-- 1. HALAMAN LOGIN -->
+    <div id="login-page" class="fixed inset-0 z-50 flex items-center justify-center bg-sky-100 p-4">
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-md border border-sky-200">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-sky-800 tracking-wide">BRIJ ACADEMY</h1>
+                <p class="text-sm text-gray-500 mt-1">Simulasi Ujian CBT ANBK - TKP</p>
+            </div>
+            <form id="login-form" onsubmit="startExam(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Nama Peserta</label>
+                    <input type="text" id="input-nama" required placeholder="Masukkan nama lengkap" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">NISN / ID Peserta</label>
+                    <input type="text" required placeholder="Masukkan nomor peserta" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors duration-200 mt-2">
+                    MULAI UJIAN
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. HEADER UJIAN -->
+    <header class="bg-sky-200 border-b border-sky-300 p-3 sm:p-4 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="flex items-center gap-3">
+                <span class="font-extrabold text-sky-900 text-lg sm:text-xl tracking-wider">BRIJ ACADEMY</span>
+                <span class="hidden sm:inline text-sky-400">|</span>
+                <span id="display-nama" class="text-sm sm:text-base text-sky-900 font-medium">Peserta: -</span>
+            </div>
+            <div class="bg-sky-900 text-white px-4 py-1.5 rounded-md font-mono text-sm sm:text-base flex items-center gap-2 shadow-inner">
+                <span class="text-xs text-sky-300 uppercase">Sisa Waktu:</span>
+                <span id="timer" class="font-bold">35:00</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 3. AREA UTAMA (SOAL & NAVIGASI NOMOR) -->
+    <main id="main-exam" class="max-w-7xl mx-auto w-full p-3 sm:p-6 flex-grow grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 items-start">
+        
+        <!-- KOLOM KIRI: AREA SOAL -->
+        <section class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between min-h-[500px]">
+            <!-- Content Soal -->
+            <div class="p-4 sm:p-6 tex2jax_process">
+                <div class="flex justify-between items-center pb-3 mb-4 border-b border-gray-100">
+                    <span id="label-no-soal" class="font-bold text-gray-700 text-base sm:text-lg">Soal No. 1</span>
+                    <span id="label-kategori" class="text-xs bg-sky-100 text-sky-700 font-semibold px-2.5 py-1 rounded">TKP</span>
+                </div>
+                
+                <p id="teks-soal" class="text-gray-800 text-sm sm:text-base leading-relaxed mb-6">
+                    Memuat soal...
+                </p>
+
+                <!-- Pilihan Jawaban -->
+                <div id="container-opsi" class="space-y-3">
+                    <!-- Opsi jawaban di-render via JavaScript -->
+                </div>
+            </div>
+
+            <!-- BUTTON NAVIGASI BAWAH -->
+            <div class="bg-gray-50 p-4 border-t border-gray-200 rounded-b-xl flex flex-wrap sm:flex-nowrap justify-between gap-2">
+                <button id="btn-prev" onclick="changeQuestion(-1)" class="flex-1 sm:flex-none px-4 py-2.5 bg-gray-600 hover:bg-gray-700 text-white font-medium text-sm rounded-lg shadow transition">
+                    &laquo; Soal Sebelumnya
+                </button>
+                
+                <button id="btn-ragu" onclick="toggleRagu()" class="flex-1 sm:flex-none px-4 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-semibold text-sm rounded-lg shadow transition flex items-center justify-center gap-2">
+                    <input type="checkbox" id="check-ragu" class="pointer-events-none w-4 h-4">
+                    <span>Ragu-ragu</span>
+                </button>
+
+                <button id="btn-next" onclick="handleNextOrFinish()" class="flex-1 sm:flex-none px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-medium text-sm rounded-lg shadow transition">
+                    Soal Berikutnya &raquo;
+                </button>
+            </div>
+        </section>
+
+        <!-- KOLOM KANAN: DAFTAR NOMOR SOAL (STATIS & STICKY) -->
+        <aside class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:sticky lg:top-24 max-h-[calc(100vh-7rem)] flex flex-col">
+            <h3 class="font-bold text-gray-700 text-sm sm:text-base mb-3 pb-2 border-b border-gray-100 flex justify-between items-center">
+                <span>Daftar Soal</span>
+                <span class="text-xs font-normal text-gray-500">Klik no untuk pindah</span>
+            </h3>
+
+            <!-- Grid Nomor Soal -->
+            <div id="grid-nomor" class="grid grid-cols-5 gap-2 overflow-y-auto max-h-60 lg:max-h-96 pr-1 no-scrollbar">
+                <!-- Tombol nomor akan di-render via JavaScript -->
+            </div>
+
+            <!-- Keterangan Warna -->
+            <div class="mt-4 pt-3 border-t border-gray-100 text-xs space-y-1.5 text-gray-600">
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 bg-emerald-500 rounded border inline-block"></span>
+                    <span>Sudah dijawab</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 bg-yellow-400 rounded border inline-block"></span>
+                    <span>Ragu-ragu</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 bg-white border border-gray-300 rounded inline-block"></span>
+                    <span>Belum dijawab</span>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- 4. HASIL UJIAN & KOREKSI JAWABAN (TAMPIL SETELAH SELESAI) -->
+    <div id="result-page" class="hidden max-w-5xl mx-auto w-full p-4 sm:p-6 flex-grow">
+        <!-- Card Ringkasan Skor -->
+        <div class="bg-white rounded-xl shadow-md border border-sky-200 p-6 mb-6 text-center">
+            <h2 class="text-2xl font-bold text-sky-900 mb-2">Hasil Ujian CBT - TKP</h2>
+            <p id="result-nama" class="text-gray-600 font-medium mb-4">Nama Peserta: -</p>
+            
+            <div class="inline-block bg-sky-50 border border-sky-200 rounded-2xl p-6 my-2">
+                <span class="block text-xs uppercase font-bold text-sky-600 tracking-wider">Total Skor Anda</span>
+                <span id="total-score" class="text-5xl font-extrabold text-sky-800">0</span>
+                <span id="max-score" class="text-sm text-gray-500 block mt-1">dari Skor Maksimal 225</span>
+            </div>
+
+            <div class="mt-4 flex justify-center gap-4 text-sm">
+                <div class="bg-emerald-50 text-emerald-800 px-4 py-2 rounded-lg border border-emerald-200">
+                    Terjawab: <span id="count-answered" class="font-bold">0</span> / 45
+                </div>
+                <div class="bg-amber-50 text-amber-800 px-4 py-2 rounded-lg border border-amber-200">
+                    Kosong: <span id="count-empty" class="font-bold">0</span> / 45
+                </div>
+            </div>
+        </div>
+
+        <!-- Daftar Koreksi & Pembahasan -->
+        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span>Koreksi & Pembahasan Soal</span>
+        </h3>
+        <div id="pembahasan-container" class="space-y-6 tex2jax_process">
+            <!-- Item pembahasan akan di-render via JavaScript -->
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // BANK SOAL TKP (45 SOAL LENGKAP SESUAI DOKUMEN PDF)
+        const questions = [
+            {
+                id: 1,
+                kategori: "PELAYANAN PUBLIK",
+                text: "Doni adalah manajer operasional di PT Maju. PT Maju sudah memesan bahan baku untuk produksi, tetapi terjadi keterlambatan pengiriman. Oleh karena itu, penyelesaian pesanan ke konsumen mengalami keterlambatan. Apa tindakan Doni selanjutnya",
+                options: [
+                    "Memotivasi bagian terkait untuk dapat menyelesaikan pesanan dengan tepat waktu.",
+                    "Memantau terus perkembangan pembuatan barang yang dipesan.",
+                    "Meminta tim produksi untuk lembur menyelesaikan pesanan.",
+                    "Memberikan penjelasan kepada klien terkait dengan kendala yang dihadapi dan meminta tambahan waktu.",
+                    "Memerintahkan staf pemasaran untuk meminta maaf kepada klien."
+                ],
+                scores: [2, 4, 1, 5, 3],
+                pembahasan: "Pilihlah jawaban yang bersikap ramah tamah dan efektif. Doni tidak dapat mempercepat proses pengiriman karena tugas itu dikerjakan oleh pihak lain. Keterlambatan sudah pasti terjadi dan hal ini berdampak pada konsumen. Sebagai atasan, Doni perlu terbuka kepada klien dan meminta maaf. Pilihan D sangat sesuai"
+            },
+            {
+                id: 2,
+                kategori: "PELAYANAN PUBLIK",
+                text: "Salah seorang rekan mengeluhkan lambatnya pengurusan klaim untuk penggantian biaya perjalanan dinas yang ditangani oleh unit kerja Anda. Di lain pihak Anda mengetahui bahwa rekan tersebut memang beberapa kali menyusulkan berkas-berkas kuitansi untuk pengajuan klaim yang diperlukan. Tindakan Anda adalah",
+                options: [
+                    "Menjelaskan kembali secara detail tata alur pengurusan berkas yang ada di unit kerja Anda sesuai dengan standar prosedur yang telah ditetapkan.",
+                    "Menyampaikan kepadanya dengan hati-hati disertai penjelasan bahwa berkas-berkasnya sedang diselesaikan dengan baik oleh seluruh tim kerja Anda.",
+                    "Mengerjakan proses adminitrasi klaim sesuai standar prosedur kerja yang ada, jika berkas telat. Klaim akan telat juga.",
+                    "Menjawab bahwa klaimnya akan ditangani perusahaan sesuai dengan harapannya dan memastikan bahwa ia puas dengan pelayanan Anda setiap saat.",
+                    "Mendengarkan keluhan pelanggan tersebut dan mencoba menjawab keluhan tersebut dengan baik dan profesionalisme sesuai dengan prosedur yang ada."
+                ],
+                scores: [2, 5, 1, 3, 4],
+                pembahasan: "Pilihlah jawaban yang bersikap ramah tamah, bekerja efektif, dan memenuhi kebutuhan orang lain. Adanya keluhan dari rekan anda bisa ditanggapi dengan sikap yang ramah tamah oleh anda. Sikap ini sangat penting karena untuk membangun hubungan yang baik dengan pelanggan. Pilihan E kurang menggambarkan karena hanya menanggapi keluhan itu tanpa berbuat apa-apa selanjutnya. Pilihan D tidak sesuai dengan keadaan yang sebenarnya karena rekan anda tidak bisa puas dengan pelayanan setiap saat karena rekan anda sudah memasukkan beberapa kali berkasnya. Pilihan B sangat sesuai"
+            },
+            {
+                id: 3,
+                kategori: "PELAYANAN PUBLIK",
+                text: "Sebagai karyawan, Irna mengingatkan mahasiswa untuk segera melunasi biaya perkuliahan agar bisa mendapat kartu mahasiswa yang dibutuhkan untuk kuliah. Namun, beberapa mahasiswa merespons negatif karena merasa fakultas tidak memahami kondisi keuangan mereka yang sedang sulit. Apa yang harus dilakukan Irna ...",
+                options: [
+                    "Mencoba memahami apa yang dialami mahasiswa dan meminta mereka mencari jalan untuk melunasi biaya kuliah.",
+                    "Menunjukkan sikap tidak bisa menerima perlakuan mahasiswa karena ia sebenarnya menjalankan prosedur operasional standar fakultas.",
+                    "Berempati dengan kebutuhan mahasiswa dan berusaha mencarikan jalan untuk membantu kesulitan mahasiswa.",
+                    "Memberikan arahan pada mahasiswa untuk melapor ke bagian keuangan pusat dan terus memantau perkembangannya.",
+                    "Mendengarkan kesulitan mahasiswa dan menyarankan mahasiswa segera mengajukan keringanan biaya ke fakultas."
+                ],
+                scores: [3, 1, 4, 5, 2],
+                pembahasan: "Pilihlah jawaban yang bersikap ramah tamah, bekerja efektif, dan memenuhi kebutuhan orang lain. Kondisi mahasiswa saat ini keuangannya sulit. Sehingga penting untuk Irna pahami dan memberikan saran. Pilihan D lebih baik daripada C karena arahan yang diberikan jelas dan spesifik di bagian keuangan serta memenuhi kebutuhan orang lain."
+            },
+            {
+                id: 4,
+                kategori: "PELAYANAN PUBLIK",
+                text: "Tina bekerja di sebuah gerai makanan. Hari ini Tina berencana segera pulang ke rumah sebelum hujan semakin deras. Ketika Tina sedang bersiap-siap menutup gerai, seorang pelanggan datang dan duduk di tempat yang disediakan. Apa yang dilakukan Tina ...",
+                options: [
+                    "Melayani pelanggan dengan ramah karena bagaimanapun pelanggan adalah raja.",
+                    "Melayani pelanggan dengan kurang bersemangat karena ia tidak bisa segera pulang.",
+                    "Melayani dengan sopan dan menawarkan menu makanan yang masih tersedia.",
+                    "Mendekati pelanggan ketika ia memanggil Tina untuk memesan makanan.",
+                    "Melayani dengan ramah dan segera memberikan daftar menu sebelum diminta."
+                ],
+                scores: [3, 1, 5, 2, 4],
+                pembahasan: "Pilihlah jawaban yang bersikap ramah tamah, bekerja efektif, dan memenuhi kebutuhan orang lain. Tina harus melayani pelanggan karena masih jam kerja dengan penuh semangat dan bersikap sopan. Pilihan C dan E menunjukkan tindakan setelah melayani pelanggan dengan sopan. Namun sebagai pelayan, tindakan menawari lebih baik daripada langsung memberikan daftar menu. Pilihan C sangat sesuai"
+            },
+            {
+                id: 5,
+                kategori: "PELAYANAN PUBLIK",
+                text: "Seorang pelanggan mengkritik salah satu produk perusahaan Andi. Menurutnya, dengan harga yang ditawarkan, ia bisa mendapatkan produk lebih bagus dari perusahaan lain. Ia meminta Andi memberikan diskon, jika tidak ia akan membeli dari perusahaan lain. Reaksi Anda adalah",
+                options: [
+                    "Memikirkan dan sangat sungguh-sungguh jawaban apa yang akan disampaikan agar memuaskan pelanggan tersebut.",
+                    "Mengabaikan saja kritikan yang disampaikan oleh pelanggan tersebut karena menurut Andi kritikan tersebut tidak penting.",
+                    "Mendengarkan dan memastikan kembali apa maksud dan kritikan yang telah disampaikan oleh pelanggan tersebut.",
+                    "Menyampaikan alasan akurat terhadap kritikan pelanggan tersebut dan menanyakan apa yang menjadi kebutuhannya.",
+                    "Berusaha untuk menjawab kritikan tersebut dengan terlebih dahulu mencari informasi akurat agar pelanggan memahaminya."
+                ],
+                scores: [3, 1, 2, 5, 4],
+                pembahasan: "Pilihlah jawaban yang bersikap ramah tamah, bekerja efektif, dan memenuhi kebutuhan orang lain. Setiap pelanggan memiliki karakteristik masing-masing. Kritikan dari pelanggan harus dijawab dengan sopan dan masuk akal oleh Andi. Selain itu, Andi juga berupaya untuk memenuhi kebutuhanya dengan menanyakannya kepada pelanggan tersebut. Pilihan D sangat sesuai"
+            },
+            {
+                id: 6,
+                kategori: "PELAYANAN PUBLIK",
+                text: "Lina bekerja sebagai kasir di sebuah restoran. Suatu ketika, seorang pelanggan menyampaikan kritikan pedas tentang menu dan pelayanan restoran kepada Lina saat membayar. Lina terkejut karena hal itu sangat jarang terjadi. Apa yang dilakukan Lina ...",
+                options: [
+                    "Menerima dengan terbuka kritik dan saran yang disampaikan oleh pelanggan.",
+                    "Tidak menanggapi dengan serius karena baru kali ini ada pelanggan seperti itu.",
+                    "Menyampaikan kritik dan saran tersebut kepada atasannya untuk ditindaklanjuti.",
+                    "Mendengarkan kritik dan saran yang disampaikan oleh pelanggan tersebut.",
+                    "Mencoba mencari solusi terhadap keluhan yang berkaitan dengan tugas Lina."
+                ],
+                scores: [4, 1, 5, 2, 3],
+                pembahasan: "Pilihlah jawaban yang bersikap ramah tamah, bekerja efektif, memenuhi kebutuhan orang lain, dan bekerja sesuai tugas wewenang yang dimiliki. Lina bekerja sebagai kasir dan dia tidak dapat menjawab dengan sesuai kritikan karena bukan wewenangnya. Agar efektif, kritikan itu bisa disampaikan kepada atasan untuk ditindaklanjuti. Pilihan C sangat sesuai"
+            },
+            {
+                id: 7,
+                kategori: "JEJARING KERJA",
+                text: "Rudi sebagai ketua BLM mengimbau pengurus agar berpartisipasi secara aktif dalam kegiatan BLM. Ina, salah satu pengurus BLM, memilih pasif karena merasa kurang setuju dengan program ketua BLM yang dirasa kurang akomodatif. Jika anda adalah Ina, apa yang anda lakukan ...",
+                options: [
+                    "Rela berpartisipasi dalam kegiatan di BLM jika Ketua BLM bisa mengakomodasi kepentingan anggota.",
+                    "Tidak terjun secara langsung dalam kegiatan di BLM karena perbedaan visi dengan Ketua BLM menyebabkan hasil yang kurang optimal.",
+                    "Bersedia berpartisipasi dalam kegiatan di BLM dan mau berdiskusi untuk menyamakan presepsi dengan Ketua BLM.",
+                    "Memberikan masukan kepala pengurus untuk terlibat aktif karena itu merupakan hal yang mendasar bagi keberhasilan kegiatan di BLM.",
+                    "Berkontribusi langsung sebagai pengurus aktif karena hal itu penting untuk menyimbangkan tujuan organisasi BLM dan saya sendiri."
+                ],
+                scores: [2, 1, 4, 3, 5],
+                pembahasan: "Pilihlah jawaban yang mampu bekerjasama dalam tim. Sebagai pengurus, anda memiliki tanggungjawab besar untuk mencapai visi misi organisasi. Pilihan E sangat sesuai"
+            },
+            {
+                id: 8,
+                kategori: "JEJARING KERJA",
+                text: "Ryan diberikan tugas untuk melakukan pembaruan sistem remunerasi perusahaan dan diberikan tenggat 1 minggu, padahal Ryan masih belum mengerti dengan jelas tentang sistem remunerasi yang lama. Apa yang akan dilakukan Ryan ...",
+                options: [
+                    "Membuat tim kecil dan aktif mendiskusikan tentang pembaruan tersebut.",
+                    "Bekerja sama dengan tim dengan membuat agenda pekerjaan secara tepat.",
+                    "Bekerja sama dengan pihak ketiga untuk menyelesaikan pembaruan sistem.",
+                    "Mencari informasi dengan mempelajari sistem remunerasi yang baru.",
+                    "Merasa kurang siap untuk melakukan pembaruan sistem remunerasi tersebut."
+                ],
+                scores: [3, 5, 4, 2, 1],
+                pembahasan: "Pilihlah jawaban yang mampu bekerjasama dalam tim dan efektif. Ryan diberikan tugas yang belum pernah ia kerjakan dan tenggat 1 minggu. Agar bisa selesai dengan efektif, Ryan dapat bekerjasama dengan tim. Pilihan C bekerjasama dengan pihak ketiga, dimana hal ini akan mengeluarkan biaya dan komunikasi perlu dijaga. Pilhan B sangat sesuai"
+            },
+            {
+                id: 9,
+                kategori: "JEJARING KERJA",
+                text: "Sejak pembelajaran jarak jauh, digunakanlah aplikasi baru untuk mengajar. Seorang guru senior yang terkenal egois mengalami kesulitan mengoperasikan aplikasi tersebut. Andi adalah guru yang memahami teknologi, tetapi kerap diperlakukan tidak baik oleh senior tersebut. Apa tindakan Andi kepada senior tersebut",
+                options: [
+                    "Memberikan bantuan ketika diminta saja.",
+                    "Menjelaskan cara mengoperasikan aplikasi tersebut.",
+                    "Menawarkan bantuan tentang cara mengoperasikan aplikasi.",
+                    "Memberikan tutorial langsung dalam penggunaan aplikasi.",
+                    "Memintanya membaca tutorial yang tertera pada aplikasi."
+                ],
+                scores: [1, 4, 3, 5, 2],
+                pembahasan: "Pilihlah jawaban yang mampu membangun dan membina hubungan sesama rekan kerja. Andi harus saling membantu dalam pekerjaan meskipun biasa diperlakukan tidak baik oleh senior tersebut. Pilihan B dan D sangat sesuai tetapi Pilihan D menunjukkan upaya lebih dan detail."
+            },
+            {
+                id: 10,
+                kategori: "JEJARING KERJA",
+                text: "Saat ini banyak orang mengalami PHK dan membutuhkan peluang usaha. Zae memiliki usaha pengolahan limbah sampah. Kapasitas masih dapat ditambahkan, namun dia kesulitan mendapatkan rekanan yang dipercaya karena pernah tertipu. Apa yang dilakukan Zae ...",
+                options: [
+                    "Mempertimbangkan untuk bekerja sama jika ada yang datang menawarkan.",
+                    "Menghubungi beberapa rekan lama dan mencoba menawarkan ke pihak lain.",
+                    "Berusaha meningkatkan kapasitas usaha tanpa meminta bantuan orang lain.",
+                    "Mencoba membuat tawaran dengan memasang iklan untuk menjajaki peluang.",
+                    "Menawarkan peluang kerja sama hanya kepada rekan-rekan yang dikenalnya."
+                ],
+                scores: [3, 1, 2, 5, 4],
+                pembahasan: "Pilihlah jawaban yang berorientasi pada orang lain dan memiliki kemampuan dalam kerjasama tim. Ada banyak orang yang membutuhkan pekerjaan dan usaha anda masih dapat menampung beberapa orang untuk bekerja. Pilihan D memiliki semangat bekerjasama karena membuka peluang orang lain untuk bekerja dan juga memberikan wadah orang lain untuk bekerja di tempatnya"
+            },
+            {
+                id: 11,
+                kategori: "JEJARING KERJA",
+                text: "Suatu hari Andri sedang terkena masalah dan bingung harus bercerita kepada siapa. Ingin bercerita kepada sahabat, tetapi sahabatnya sedang sibuk dengan tugas akhir bulan. Andri kemudian mendatangi Anda yang sebenarnya juga sedang banyak pekerjaan. Apa yang Anda lakukan",
+                options: [
+                    "Menghindari mendengar keluhan karena tidak suka menjadi pilihan terakhir untuk bercerita.",
+                    "Mendengarkan ceritanya tanpa memberikan solusi dengan alasan waktunya juga sangat terbatas.",
+                    "Menyampaikan pada Andri bahwa meluangkan waktu untuk mendengarkan jika pekerjaan sudah selesai.",
+                    "Mendengarkan ceritanya dan hanya menyampaikan bahwa masalah tersebut sudah biasa terjadi pada siapa pun.",
+                    "Menunda pekerjaan dengan mendengarkan keluhanya sehingga dia merasa lega sambil memberikan solusi."
+                ],
+                scores: [1, 2, 3, 4, 5],
+                pembahasan: "Pilihlah jawaban yang mampu membangun dan membina hubungan dengan baik. Ketika teman memiliki masalah, dia sangat ingin dibantu. Anda saat ini bekerja namun pekerjaan anda tidak menuntut anda untuk segera diselesaikan dan butuh konsentrasi. Pilihan E sangat sesuai"
+            },
+            {
+                id: 12,
+                kategori: "JEJARING KERJA",
+                text: "Renata mangambil mata kuliah pemasaran. Sebagian besar peserta kuliahnya adalah adik angkatan dua tahun di bawahnya. Mereka mendapat tugas kelompok dari dosennya. Saat pembagian kelompok, Renata merasa paling senior. Bagaimana Renata menyikapi hal tersebut ...",
+                options: [
+                    "Menunggu anggota lain menghubungi untuk pembagian tugasnya.",
+                    "Memerintahkan anggota lain menyelesaikan semua tugas yang diberikan.",
+                    "Menghubungi salah satu anggota yang dirasa cocok untuk bekerja bersama.",
+                    "Membuka komunikasi dengan semua anggota dan membagi peran sebelum menyelesaikan bersama.",
+                    "Melihat kemampuan masing-masing anggota sebagai dasar pembagian peran dalam tugas."
+                ],
+                scores: [3, 2, 1, 5, 4],
+                pembahasan: "Pilihlah jawaban yang mampu bekerjasama dalam kelompok. Renata harus mampu bekerjasama dengan siapapun dan aktif bekerja. Pilihan D sangat sesuai"
+            },
+            {
+                id: 13,
+                kategori: "JEJARING KERJA",
+                text: "Dalam rapat, mahasiswa magang mengusulkan strategi baru yang masuk akal untuk dilaksanakan. Namun, beberapa anak buah Dita menolak usulan tersebut karena belum teruji keterandalannya. Sebagai manajer pemasaran, apa yang sebaiknya Dita lakukan",
+                options: [
+                    "Berpikir mengenai apa yang sebaiknya dilakukan dalam menghadapi situasi tersebut.",
+                    "Mengupayakan agar rapat berjalan efektif dengan menghindari polemik yang terjadi akibat pendapat yang berbeda.",
+                    "Secara personal mengapresiasi usulan mahasiswa magang agar tidak menimbulkan gejolak di bawah.",
+                    "Tetap menjaga keterbukaan terhadap semua usulan dengan mengedepankan kebersamaan dalam memecahkan masalah bersama.",
+                    "Memberi ruang pelaksanaan usulan mahasiswa magang karena bisa jadi usulan tersebut menjadi solusi yang baik."
+                ],
+                scores: [1, 3, 2, 5, 4],
+                pembahasan: "Pilihlah jawaban yang memiliki tindakan baik dan bijak dalam mengahadapi masalah. Sebagai manajer, Dita harus terbuka dalam menerima usulan bahkan dari mahasiswa magang. Meskipun usulan itu ditolak oleh beberapa bawahan Dita, Dita harus objektif. Selain itu, melihat situasi seperti itu, dalam rapat wajib ada kesimpulan yang diselesaikan secara bersama. Pilihan D sangat sesuai"
+            },
+            {
+                id: 14,
+                kategori: "JEJARING KERJA",
+                text: "Hetta dipromosikan menjadi manajer di perusahaan cabang. Deny selaku karyawan yang telah lama berada di perusahaan cabang sebenarnya berharap dialah yang menjadi manajernya. Ketika Hatta membutuhkan bantuan Deny, apa yang sebaiknya dilakukan Deny ...",
+                options: [
+                    "Memberikan informasi yang dibutuhkan agar Hatta dapat menyelesaikan tugasnnya.",
+                    "Bersikap seolah-olah tidak memiliki pemahaman yang baik tentang perusahaan.",
+                    "Memberikan informasi yang dibutuhkan dan menawarkan bantuan yang diperlukan.",
+                    "Memberikan bantuan dan berbagai informasi ketika Hatta berulangkali memintanya.",
+                    "Membantu seperlunya saja agar Hatta juga berusaha mencari bantuan dari pihak lain."
+                ],
+                scores: [4, 1, 5, 2, 3],
+                pembahasan: "Pilihlah jawaban yang mampu bekerjasama dalam tim. Sebagai rekan kerja, anda harus bisa bekerjasama dan saling membantu. Pilihan C lebih baik daripada pilihan A karena pada pilihan C menunjukkan upaya lebih degan menawarkan bantuan lain yang dibutuhkan"
+            },
+            {
+                id: 15,
+                kategori: "JEJARING KERJA",
+                text: "Irma sering menjuarai kelas speed climbing di acara yang diadakan oleh penguruan tinggi tingkat nasional. Namun, karena mengalami cedera, Irma tidak bisa mengikuti lomba lagi. Sementara itu, belum ada penerus yang bisa menyamai prestasinya. Universtas berharap agar Irma membagikan keterampilan yang dimiliki kepada adik-adik anggota pecinta alam. Apa tindakan yang sebaiknya dilakukan oleh Irma ...",
+                options: [
+                    "Tetap konsisten meneruskan budaya berbagai pengalaman kepada adik-adik anggota pecinta alam seperti yang dilakukannya saat masih aktif berlomba.",
+                    "Bersedia membagikan pengalaman dan keterampilannya apabila jelas ada surat tugas resmi dari pihak universitas.",
+                    "Membagikan pengalaman dengan lapang dada jika mendapat fasilitas pengobatan terhadap cedera yang dialami.",
+                    "Menjadikan sesi berbagai pengalaman sebagai upaya penguatan ikatan kebersamaan dan bagian dari kebiasaan berbagi.",
+                    "Enggan membagikan pengalaman juara speed climbing kepada adik-adik anggota pecinta alam."
+                ],
+                scores: [4, 3, 2, 5, 1],
+                pembahasan: "Pilihlah jawaban yang mampu berbagi informasi dan berorientasi kepada orang lain. Sebagai orang yang pernah mendapatkan juara, anda perlu berbagi kepada adik-adik anda tanpa ada syarat dan murni atas kemauan pribadi. Pilihan A dan D menunjukkan anda mau berbagi. Pada pilihan A motif anda untuk berbagi karena meneruskan budaya berbagi pengalaman seperti saat masih aktif berlomba. Pada pilihan D motif anda untuk berbagi karena ada nilai sosial yang didapatkan. Pilihan D sangat sesuai"
+            },
+            {
+                id: 16,
+                kategori: "SOSIAL BUDAYA",
+                text: "Teguh adalah seorang pegaai kantor pusat di Jakarta. Ia dipindahkan ke kantor cabang dan menemukan kesulitan untuk bergaul dengan pegawai yang lain karena lingkungan kerja yang terkotak-kotak. Apa yang seharusnya dilakukan Teguh",
+                options: [
+                    "Menjalankan aktivitas yang sama seperti yang dilakukannya di kantor pusat.",
+                    "Mencari informasi terkait kondisi kantor sebenarnya.",
+                    "Berdiskusi dengan rekan kerja terkait kondisi lingkungan kerja.",
+                    "Berupaya menghilangkan setiap sekat yang ada di antara pegawai.",
+                    "Menyelenggarakan acara kantor yang menghadirkan semua pegawai dan meminta mereka untuk saling terbuka di sana."
+                ],
+                scores: [1, 2, 3, 4, 5],
+                pembahasan: "Pilihlah jawaban yang mampu beradaptasi dan bekerja efektif dalam masyarakat majemuk. Linkungan yang kotak-kotak akan memengaruhi produktifitas kerja. Teguh tidak boleh tinggal diam dan hanya mengamati saja. Perlu ada tindakan agar semua bisa terbuka dan tidak berkotak-kotak. Pilhan E sangat sesuai karena menggambarkan kegiatan yang mampu mengatasi masalah lingkungan kerja yang kotak-kotak"
+            },
+            {
+                id: 17,
+                kategori: "SOSIAL BUDAYA",
+                text: "Pada suatu hari, atasan Wati mengundangnya untuk menghadiri perayaan adat penting yang akan dihadiri oleh keluarga besar atasannya. Karena berbeda suku, Wati tidak tahu tentang prosesi perayaan ini. Ia pun sungkan bertanya kepada atasannya. Apa yang sebaiknya Wati lakukan ...",
+                options: [
+                    "Ia menolak dengan halus karena sebenarnya tidak terlalu berminat dengan perayaan adat suku lain.",
+                    "Ia mencari tahu terlebih dahulu informasi tentang perayaan adat keluarga bos tersebut di internet.",
+                    "Ia bertanya kepada si bos tentang persiapan apa saja yag harus dilakukan agar ia bisa hadir di perayaan itu.",
+                    "Ia meminta izin bos untuk mengajak teman untuk memperkenalkan budaya berbeda dari keluarga bos.",
+                    "Ia datang dengan memakai atribut yang sesuai dengan perayaan adat tersebut agar ia dapat berbaur."
+                ],
+                scores: [1, 3, 5, 2, 4],
+                pembahasan: "Pilihlah jawaban yang mampu beradaptasi dalam masyarakat majemuk. Perbedaan suku dalam merayakan acara menjadi hal yang wajar. Namun ada beberapa budaya yang memerlukan persiapan tertentu agar kita dapat menyesuaikan diri dalam acara tersebut. Agar bisa diikuti dengan baik, anda perlu bertanya langsung tentang persiapan dalam mengikuti acara tersebut. Tindakan ini juga dapat membangun interaksi anda dengan atasan. Pilihan C sangat sesuai"
+            },
+            {
+                id: 18,
+                kategori: "SOSIAL BUDAYA",
+                text: "Togar, satu-satunya karyawan bersuku X yang berprestasi, dipromosikan menjadi manajer. Orang yang berasal dari suku X dikenal memiliki rasa kekerabatan yang kuat. Perusahaan tersebut memiliki karyawan dari berbagai suku. Togar bebas memilih tim kerja. Apa yang seharusnya dilakukan Togar ...",
+                options: [
+                    "Berkenalan dengan karyawan suku lain, tetapi tidak menjadikan mereka anggota tim.",
+                    "Membentuk tim kerja dengan suku yang beragam dan mendorong kerja sama tim.",
+                    "Bersedia bekerja sama dengan suku yang lain jika mereka memiliki visi yang sama.",
+                    "Memilih anggota tim yang sesuku karena memudahkan komunikasi.",
+                    "Bersedia bekerja sama dengan semua karyawan yang ada di perusahaan."
+                ],
+                scores: [1, 3, 5, 2, 4],
+                pembahasan: "Pilihlah jawaban yang mampu beradaptasi dan bekerja efektif dalam masyarakat majemuk. Tidak dapat dipungkiri bahwa dalam pembentukan kelompok terdapat indikator kesamaan suku. Tetapi sebagai manajer, Togar harus mampu bekerjasama kepada semua karyawan tanpa memandang latar belakang. Yang menjadi tujuan soal ialah cara anda memilih tim kerja. Perlu anda ketahui bahwa hanya anda yang bersuku X. Agar kerjasama tim efektif, anda harus memilih tim yang sevisi dengan anda. Pilihan C sangat sesuai"
+            },
+            {
+                id: 19,
+                kategori: "SOSIAL BUDAYA",
+                text: "Rudi adalah pegawai baru di sebuah kantor multinasional. Kantor itu memiliki pegawai dengan berbagai macam latar belakang. Banyaknya perbedaan ini sering kali membuat ia kebingungan dalam beradaptasi. Apa yang seharusnya Rudi lakukan ...",
+                options: [
+                    "Mengadakan pertemuan atarpegawai dengan melibatkan semua pegawai yang ada.",
+                    "Berusaha mengikuti ritme di kantor yang sangat majemuk.",
+                    "Menghormati rekan kerja lain yang mempunyai perbedaan pandangan.",
+                    "Memahami karakteristik tiap-tiap pegawai.",
+                    "Bekerja seperti biasa dan tidak peduli dengan rekan yang lain."
+                ],
+                scores: [5, 1, 3, 4, 2],
+                pembahasan: "Pilihlah jawaban yang mampu beradaptasi dan bekerja efektif dalam masyarakat majemuk. Rudi harus mampu beradaptasi di lingkungan yang latar belakangnya berbeda-beda. Agar bisa memahami semua latar belakang rekan kerjanya, bisa degan memahami karakteristik setiap pegawai namun hal ini membutuhkan waktu yang lama dan bersifat subjektif. Biasanya, dengan bekegiatan bersama, karakter rekan akan terlihat dan mampu dipahami. Selain itu, anda bisa beradaptasi dengan mudah karena berada dalam kegiatan yang sama. Pilihan A sangat sesuai"
+            },
+            {
+                id: 20,
+                kategori: "SOSIAL BUDAYA",
+                text: "Arman diangkat menjadi PNS dan ditempatkan di pulau terluar Indonesia. Salah satu cita-cita idealis Arman adalah mempertahankan tradisi masyarakat Indonesia sebagai masyarakat yang taat hukum. Apa yang harus dilakukan oleh Arman ...",
+                options: [
+                    "Selalu menjaga nama baik bangsa dan negara di mana pun berada.",
+                    "Memakai atribut kebangsaan Republik Indonesia di mana pun dia berada.",
+                    "Mengajak masyrakat untuk berdialog tentang kehidupan bermasyarakat secara rutin.",
+                    "Mengejarkan nilai-nilai kehidupan bermasyarakat, berbangsa, dan bernegara pada masyarakat sekitar.",
+                    "Taat dan patuh terhadap aturan yang berlaku pada masyarakat tersebut."
+                ],
+                scores: [3, 2, 4, 5, 1],
+                pembahasan: "Pilihlah jawaban yang mampu beradaptasi dan bekerja efektif dalam masyarakat majemuk. Masyarakat di pulau terluar di Indonesia masih banyak yang belum memahami indonesia secara utuh. Sebagai ASN, Arman bisa melakukan kegiatan untuk menumbuhkan semangat bernegara masyarakat disana. Harus ada aksi nyata tidak cukup dengan atribut / menjaga nama baiknya. Pilihan D sangat sesuai"
+            },
+            {
+                id: 21,
+                kategori: "TIK",
+                text: "Perangkat lunak yang Anda beli dari luar negeri ternyata dimanfaatkan oleh karyawan yang tidak bertanggung jawab. Sebagai akibatnya terjadi kesalahan sistem dan perusahaan Anda mendapatkan catatan hitam. Apa yang akan Anda lakukan",
+                options: [
+                    "Menghentikan sementara penggunaan teknologi tersebut hingga kesalahan sistem dapat diperbaiki.",
+                    "Tetap menggunakan teknologi tersebut karena sudah terbukti menghasilkan banyak keuntungan.",
+                    "Mengevaluasi dan memberi sanksi para pengguna program yang tidak bertanggung jawab.",
+                    "Teknologi tetap dimanfaatkan karena complain yang diterima tidak sebanding.",
+                    "Membatasi penggunaan teknologi tersebut hanya oleh orang-orang yang diberikan kewenangan."
+                ],
+                scores: [3, 2, 4, 1, 5],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif. Sudah terbukti bahwa perusahaan anda melanggar. Kejadian ini harus dapat dievaluasi agar tidak terjadi kejadian yang serupa. Pilihan C dan E menggambarkan sebuah solusi namun solusi yang lebih detail itu terlihat pada pilihan E."
+            },
+            {
+                id: 22,
+                kategori: "TIK",
+                text: "Anda bekerja sebagai pegawai bagian rekam medis pasien di rumah sakit. Selama ini Anda membuat catatan rekam medis secara manual. Untuk peningkatan pelayanan rumah sakit, pimpinan meminta Anda menggunakan aplikasi rekam medis. Anda menerima informasi bahwa aplikasi tersebut sering mengalami kebocoran. Apa tindakan Anda",
+                options: [
+                    "Menghentikan pemakaian aplikasi apabila terjadi kebocoran data staf rumah sakit dan pasien.",
+                    "Mengingatkan teman untuk menghentikan penggunaan aplikasi karena khawatir data terkait rumah sakit beredar luas.",
+                    "Menyampaikan pada pimpinan rumah sakit untuk menghentikan penggunaan dan menacari aplikasi yang terjaga keamananya.",
+                    "Tetap menggunakan aplikasi karena aplikasi tersebut mudah untuk digunakan.",
+                    "Menghentikan penggunaan aplikasi jika terjadi kebocoran data pribadi."
+                ],
+                scores: [4, 2, 5, 1, 3],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif. Setiap aplikasi memiliki kelebihan dan kekurangan. Jika aplikasi digunakan membocorkan data pasien, anda tetap harus menggunakan aplikasi namun menggunakan aplikasi lain yang sejenis. Karena terbukti banyak manfaat yang anda peroleh. Pilihan C sangat sesuai"
+            },
+            {
+                id: 23,
+                kategori: "TIK",
+                text: "Muray dipercaya memegang anggaran kantor. Ketika sedang sibuk, dia diminta melakukan transaksi pembayaran kepada pihak ketiga. Rekannya menawarkan untuk membantu membayarkan melalui ATM kantor. Apa yang Muray lakukan",
+                options: [
+                    "Menggunakan pembayaran secara daring agar tidak disalahkan jika data keuangan kantor tersebar.",
+                    "Memberikan nomor PIN ATM kantor kepadarekan yang membantu mengambilkan uang.",
+                    "Memilih untuk beralih menggunakan pembayaran secara daring agar data kantor tetap aman.",
+                    "Meminta tambahan keamanan akun pada pihak bank untuk meningkatkan keamanan data.",
+                    "Mengingatkan rekan kerja lain untuk menggunakan layanan terproteksi untuk keperluan kantor."
+                ],
+                scores: [4, 1, 5, 3, 2],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif. Muray dapat menggunakan layanan transfer secara daring tanpa perlu ke ATM. Pilhan A dan C menggambarkan memanfaatkan layanan transfer daring. Pilihan C lebih berorientasi pada manfaat penggunaan layanan transfer daring daripada Pilihan A yang berorientasi pada agar tidak salahkan dalam pekerjaan."
+            },
+            {
+                id: 24,
+                kategori: "TIK",
+                text: "Sebagai seorang pimpinan perusahaan, Andika ingin seluruh karyawan menggunakan aplikasi untuk mengakses data di aplikasi pusat data. Seorang karyawan keberatan akan hal tersebut karena sudah terbiasa dengan bekerja secara manual. Bagaimana Andika menyikapi hal tersebut ...",
+                options: [
+                    "Mengimbau semua karyawan untuk menggunakan aplikasi tersebut agar setiap karyawan bisa saling mengetahui data yang diakses.",
+                    "Meminta semua karyawan agar menjaga data pribadi untuk membuka akses aplikasi di gawai masing-masing.",
+                    "Membuat rancangan kebijakan yang mengatur bagaimana penggunaan aplikasi pusat data agar dapat digunakan dengan aman.",
+                    "Menghentikan penggunaan aplikasi tersebut jika data pribadi dapat diakses oleh karyawan secara tidak bertanggung jawab.",
+                    "Menghentikan penggunaan aplikasi tersebut ketika ada karyawan yang mengeluhkan data pribadi yang disalahgunakan pihak lain."
+                ],
+                scores: [3, 4, 5, 1, 2],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif. Setiap aplikasi memiliki kelebihan dan kekurangan. Untuk aplikasi pusat data, salah satu kekurangannya ialah segi keamanan. Agar masalah tidak terjadi, pimpinan perusahaan dapat membuat rancangan kebijakan yang mengatur akses ke pusat data. Pilhan C sangat sesuai"
+            },
+            {
+                id: 25,
+                kategori: "TIK",
+                text: "Intan mendapat tugas dari atasanya untuk membuat rekapitulasi data mahasiswa di departemen mereka menggunakan computer. Sebelumnya Intan biasa bekerja dengan mencatat seluruh data mahasiswa dan mengarsipkannya dalam berkas manual. Bagaimana sikap Intan terkait dengan hal tersebut",
+                options: [
+                    "Segera melakukan konversi catatan menjadi data digital sehingga mudah diakses oleh pihak yang membutuhkan data.",
+                    "Menunda rekapitulasi data dengan menggunakan komputer karena memakan banyak waktu dan biaya.",
+                    "Membangun pangkalan data yang akan bermanfaat bagi semua staf di departemen tersebut.",
+                    "Berusaha sedikit demi sedikit merekap data secara digital sehingga efisien untuk menyelesaikan tugas kemahasiswaan.",
+                    "Merasa ragu-ragu karena data digital hanya bisa diakses oleh pihak tertentu sehingga bisa menjadi hambatan bagi yang lain."
+                ],
+                scores: [5, 2, 4, 3, 1],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif. Intan bertugas untuk membuat rekapitulasi data. Pilihan A menunjukkan pekerjaan intan sesuai dengan tindakan mengkonversi ke data digital sangat sesuai. Beda halnya dengan membangun pangkalan data. Hal ini kurang berkaitan dengan tugas Intan yang memiliki tugas untuk merekapitulasi data"
+            },
+            {
+                id: 26,
+                kategori: "TIK",
+                text: "Polo merupakan staf personalia di perusahaan yang memiliki banyak sekali calon karyawan pensiun. Ia diberi kewenangan untuk menggunakan aplikasi baru karena banyak posisi yang harus ia rekrut. Apa tindakan Polo ...",
+                options: [
+                    "Menjalankan secara manual supaya hasilnya akurat karena belum tentu dapat diperhatikan ketika menggunakan aplikasi.",
+                    "Belajar mengoptimalkan seluruh fungsi yang ada dalam aplikasi supaya pekerjaan bisa selesai lebih cepat.",
+                    "Menginisiasi pertemuan sehingga setiap bagian menjelaskan cara pengelolaan SDM berbasis aplikasi yang mereka gunakan.",
+                    "Mempelajari cara kerja dan aplikasi kerja yang bisa menjadi sumber data pengelolaan SDM yang ada di perusahaan A.",
+                    "Menggunakan metode yang selama ini dipakai dan melibatkan orang-orang yang biasa melakukan."
+                ],
+                scores: [1, 5, 3, 4, 2],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif dan bertanggungjawab atas pekerjaannya. Polo diminta untuk menggunakan aplikasi baru untuk menunjang pekerjaannya. Pilihan B sangat sesuai karena dapat menggunakan aplikasi tersebut dan mengeksplore fungsi yang ada"
+            },
+            {
+                id: 27,
+                kategori: "TIK",
+                text: "Ani menggunakan aplikasi komputer dalam bekerja. Aplikasi komputer selalu diperbaharui setiap tahun dengan menambah fitur baru dan dipromosikan pada semua pemakai. Walaupun demikian, pembaharuan aplikasi membutuhkan waktu agak lama. Apa yang akan Ani lakukan ...",
+                options: [
+                    "Ani akan mencoba aplikasi komputer yang terbaru karena menurutnya pasti ini yang terbaik.",
+                    "Teman kerja yang telah mencoba aplikasi baru mendorong Ani untuk ikut mencoba aplikasi tersebut.",
+                    "Ani mencoba aplikasi komputer terbaru dan membandingkan dengan aplikasi merek lain.",
+                    "Ani menganggap bahwa mempelajari dan mengunduh aplikasi komputer terbaru menghabiskan waktu.",
+                    "Ani akan memperbaharui aplikasi komputernya jika ada permintaan dari atasan."
+                ],
+                scores: [4, 3, 5, 2, 1],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif. Ani menggunakan aplikasi komputer dalam bekerja. Setiap tahun selalu ada pembaharuan aplikasi dan hal ini membuat Ani lebih bersemangat bekerja karena akan mencoba beberapa fitur yang baru. Pada pilihan C, Ani memiliki semangat yang tinggi karena membandingkan dengan aplikasi merek lain. Tindakan ini termasuk positif dan dianggap sebagai cara untuk menambawah wawasan TIK. Pilihan C sangat sesuai"
+            },
+            {
+                id: 28,
+                kategori: "TIK",
+                text: "Kantor tempat Anda bekerja menerapkan penggunaan aplikasi baru untuk menyusun laporan. Anda tahu bahwa jenis aplikasi tersebut cukup kompleks dan rumit. Apa yang Anda lakukan",
+                options: [
+                    "Merasa yakin untuk memanfaatkan aplikasi yang lebih sederhana dalam pekerjaan.",
+                    "Mencoba menggunakan aplikasi tersebut untuk pelaporan kerja setiap hari.",
+                    "Mencoba penggunaan aplikasi tersebut meski butuh waktu yang tidak sebentar.",
+                    "Mempelajari pemanfaatan aplikasi tersebut pada bidang-bidang lain di perusahaan.",
+                    "Mencoba penggunaan aplikasi tersebut untuk meminimalkan kesalahan pada penyusunan laporan."
+                ],
+                scores: [1, 5, 2, 3, 4],
+                pembahasan: "Pilihlah jawaban yang menggunakan TIK dengan efektif. Sebagai karyawan anda harus siap menggunakan aplikas yang diterapkan oleh kantor. Pilihan B dan D menunjukkan upaya anda untuk mencoba aplikasi dengan tujuan yang baik. Kalimat \"untuk meminimalkan kesalahan\" kurang berkaitan dengan pengatahuan anda yang menganggap aplikasi tersebut cukup kompleks dan rumit. Sehingga pilihan B yang sangat sesuai"
+            },
+            {
+                id: 29,
+                kategori: "TIK",
+                text: "Pemesanan sepeda yang diproduksi perusahaan Bara meningkat pesat sejak adanya anjuran pemerintah kepada msayarakat untuk giat berolahraga. Namun, staf bagian gudang sering kali melakukan kesalahan pencatatan karena menumpuknya data pemesanan dengan tidak teratur. Sebagai salah satu direksi, apa yang sebaiknya dilakukan Bara ...",
+                options: [
+                    "Memberi pelatihan kepada staf gudang untuk bekerja dengan lebih teliti.",
+                    "Mempelajari sistem pencatatan digital secara mendalam kemudian mengembangkannya sesuai dengan yang dibutuhkan.",
+                    "Meminta perusahaan pencatatan digital untuk membuat aplikasi yang sesuai.",
+                    "Menugasi staf bagian teknologi informasi untuk membuat aplikasi yang dibuthkan.",
+                    "Mencoba membuat aplikasi pencatatan sementara dengan apa adanya sesuai dengan yang dibutuhkan oleh staf gudang."
+                ],
+                scores: [1, 3, 4, 5, 2],
+                pembahasan: "Pilihlah jawaban yang mampu menggunakan TIK dengan efektif. Sebagai direksi, anda tidak perlu bekerja untuk membuat / mengembangkan aplikasi sesuai kebutuhan di bagian produksi. Anda perlu mendelegasikan kepada tim khusus IT untuk membuat aplikasi yang dibutuhkan. Pilihan D sangat sesuai"
+            },
+            {
+                id: 30,
+                kategori: "TIK",
+                text: "Dodi sedang mempersiapkan diri untuk ujian besok. Saat malam ia baru ingat bahwa masih ada tugas yang harus dikumpulkan minggu itu tapi belum dikerjakan. Ia juga teringat buku yang diperlukan untuk tugas masih dipinjam dosen. Apa tindakan yang sebaiknya Dodi lakukan",
+                options: [
+                    "Membuat rencana memulai pengerjaan tugas.",
+                    "Belajar dipercepat dan mulai mengerjakan tugas.",
+                    "Berhenti dulu dan memikirkan hal yang lebih enak dilakukan.",
+                    "Mencari buku yang dipinjam lebih dulu.",
+                    "Mengerjakan tugas karena belum dikerjakan sama sekali."
+                ],
+                scores: [3, 5, 1, 2, 4],
+                pembahasan: "Pilihlah jawaban yang mampu menyaring informasi dengan baik / memiliki kemampuan kecakapan literasi media. Undian pengumuman melalui pesan singkat berpotensi mengandung unsur penipuan. Agar Dodi bisa mengetahui dengan pasti, maka sebaiknya Dodi memberitahukannya langsung kepada pihak perusahaan. Pilihan B sangat sesuai"
+            },
+            {
+                id: 31,
+                kategori: "PROFESIONALISME",
+                text: "Heri merupakan anggota baru dalam suatu unit kerja yang menempati jabatan kosong karena pegawai lama dimutasi. Ada pekerjaan yang belum selesai dikerjakan dan atasan meminta Heri untuk menyelesaikan padahal ia belum terlalu memahaminya. Bagaimana tindakan Heri sebaiknya",
+                options: [
+                    "Menanyakan beberapa hal yang tidak dipahami kepada atasan agar hasil kerjanya benar.",
+                    "Menolak mengerjakan karena itu adalh tugas staf sebelumnya dan bukan tugas Heri.",
+                    "Dikerjakan sebisanya saja meski tidak terlalu paham.",
+                    "Aktif bertanya ke atasan maupun senior tentang hal-hal yang dapat meningaktkan kinerejanya.",
+                    "Membuat jadwal sharing-knowledge dengan rekan-rekan dan aktif ikut pelatihan untuk meningatan pemahamannya"
+                ],
+                scores: [5, 1, 2, 3, 4],
+                pembahasan: "Pilihlah jawaban yang mampu melaksanakan tugas sesuai fungsi dan tuntutan jabatan. Tugas pegawai lama belum selesai dan pimpinan meminta anda untuk menyelesaikannya. Anda harus mengerjakannya dengan kemampuan yang anda miliki, jika ada bagian yang kurang dipahami anda harus aktif bertanya kepada atasan. Pilihan A sangat sesuai"
+            },
+            {
+                id: 32,
+                kategori: "PROFESIONALISME",
+                text: "Sahril diberi tugas oleh pimpinan untuk melakukan penulisan kuesioner terkait penilaian kinerja organisasi yang akan diterapkan di kantor, padahal Sahril tidak pernah menyusun kuesioner apa pun sebelumnya. Tugas tersebut harus diselesaikan dalam waktu 1 minggu. Apa yang akan Sahril lakukan",
+                options: [
+                    "Membuat strategi komunikasi dengan pihak lain yang berkompeten dalam melakukan agenda penulisan kuesioner.",
+                    "Merencanakan detail pelaksanaan penulisan kuesioner tersebut agar dapat diselesaikan tepat waktu.",
+                    "Meminta kepada atasan agar Sahril dapat mengerjakan tugas sesuai dengan pemahamannya.",
+                    "Mengerjakan tugas menulis kuesioner jika tugas utama pekerjaan di kantor telah selesai dikerjakan.",
+                    "Memberikan perhatian untuk mengerjakan penulisan kuesioner dengan tetap memgokuskan pada pekerjaan utama."
+                ],
+                scores: [5, 4, 3, 1, 2],
+                pembahasan: "Pilihlah jawaban yang mampu melaksanakan tugas sesuai fungsi dan tuntutan jabatan. Tugas Menyusun kuesioner belum pernah Sahril kerjakan. Namun, tugas itu tetap harus dikerjakan sesuai aturannya. Agar tugas dikerja sesuai standar, Sahril bisa melakukan komunikasi dengan orang yang berkompeten sambil belajar. Pilihan A sangat sesuai"
+            },
+            {
+                id: 33,
+                kategori: "PROFESIONALISME",
+                text: "Deni mendapatkan tugas dari Pembina Unit Kegiatan Mahasiswa Karate untuk mengikuti lomba tingkat nasional mewakili universitas. Saat mendekati latihan akhir, ia mengalami cedera ringan. Apa yang perlu dilakukan oleh Deni ...",
+                options: [
+                    "Langsung mengundurkan diri untuk mengikuti perlombaan.",
+                    "Melaporkan kondisi cederanya kepada Pembina sevelum mengambil tindakan.",
+                    "Merekomendasikan calon pengganti sambil tetap mengikuti latihan.",
+                    "Meminta Pembina untuk mencari mahasiswa lain sebagai pengganti.",
+                    "Memulihkan diri terlebih dahulu, selanjutnya menceritakan kondisinya kepada Pembina."
+                ],
+                scores: [1, 4, 3, 2, 5],
+                pembahasan: "Pilihlah jawaban yang memiliki semangat berprestasi. Deni akan mengikuti lomba tetapi dia mengalami cedera ringan. Karena ini tanggungjawab dan kepercayaan yang diberikan, Deni bisa mencoba memulihkan cederanya sambil menceritakan kondisinya. Upaya ini termasuk memiliki semangat dalam mencapai prestasi. Pilihan E sangat sesuai"
+            },
+            {
+                id: 34,
+                kategori: "PROFESIONALISME",
+                text: "Orang tua murid akan menyelenggarakan kegiatan. Bu Bagyo sebagai narahubung, nomor ponsel Bu Bagyo dicantumkan dalam pengumuman. Calon peserta kegiatan menghubungi Bu Bagyo pada malam hari sehingga Bu Baygo merasa terganggu. Bagaimana sikap Bu Bagyo ...",
+                options: [
+                    "Mengusulkan pengadaan nomor lain yang disepakati bersama untuk jam penggunaanya.",
+                    "Membiarkan mereka menghubungi karena memang sudah menjadi resiko sebagai narahubung.",
+                    "Meminta panitia untuk mengganti posisi narahubung karena merasa terganggu.",
+                    "Mengabaikan pendaftaran maupun pertanyaan yang masuk pada waktu yang tidak tepat.",
+                    "Mengingatkan sesama orang tua murid lainnya agar situasi ini tidak terjadi pada mereka."
+                ],
+                scores: [3, 5, 2, 1, 4],
+                pembahasan: "Pilihlah jawaban yang melaksanakan tugas sesuai fungsi dan tuntutan jabatan. Tugas sebagai narahubung siap menerima panggilan atau pesan yang menanyakan kegiatan yang akan diadakan. Pilihan B sangat sesuai"
+            },
+            {
+                id: 35,
+                kategori: "PROFESIONALISME",
+                text: "Bekerja untuk suatu penelitian dengan dosen, Ilham merencanakan survei penggunaan transportasi massal. Ia ingin mengumpulkan data di jam sibuk agar efektif. Namun, hal ini memerlukan waktu lebih panjang. Padahal datanya diperlukan segera. Apa yang sebaiknya dilakukan Ilham",
+                options: [
+                    "Membagi tugas ke beberapa orang agar survei lebih cepat.",
+                    "Membuat rencana detail pengumpulan dan pengolahan data.",
+                    "Menulis rencana kegiatan berdasarkan arahan dosen.",
+                    "Bekerja sesuai arahan dosen yang menugaskan.",
+                    "Menyiapkan rencana cadangan jika data tidak terpenuhi."
+                ],
+                scores: [5, 4, 3, 1, 2],
+                pembahasan: "Pilihlah jawaban yang yang professional dalam bekerja. Tugas survei memiliki waktu yang datanya harus dikumpulkan segera. Agar berjalan sesuai rencana, tenaga yang dibutuhkan harus banyak. Selain itu, jika tugas ini dikerja sendirian akan membutuhkan waktu yang lama karena lokasi penelitian yang luas dan tidak semua responden ingin mengisi survei sebab masih jam kerja, untuk itu Ilham harus membagi tugasnya. Pilihan A sangat sesuai"
+            },
+            {
+                id: 36,
+                kategori: "PROFESIONALISME",
+                text: "Tina selalu mendorong tim kerjanya untuk bekerja keras sehingga target tim terlampaui. Ketika menjelang akhir tahun, salah satu anggota timnya mendadak mengundurkan diri sehingga target tahun ini mustahil dipenuhi. Apa yang dilakukan Tina",
+                options: [
+                    "Menyadari bahwa ia merasa kecewa sehingga tidak lagi memotivasi tim kerjanya.",
+                    "Menghubungi anggota tim yang mengundurkan diri untuk mengungkapkan kekecewaanya.",
+                    "Menyadari emosinya, tetapi tetap berupaya mendorong timnya untuk bekerja keras.",
+                    "Menginisiasi strategi baru untuk mengoptimalkan pencapaian target tim.",
+                    "Mencoba mengendalikan kekecewaan dan kemarahan sambil menjaga emosi dan motivasi timnya."
+                ],
+                scores: [1, 2, 4, 5, 3],
+                pembahasan: "Pilihlah jawaban yang semangat berprestasi. Keadaan yang kurang diharapkan bisa dicoba dengan strategi yang baru. Sebagai ketua tim, harus memberikan energi positif dan optimis dalam bekerja. Pilihan D sangat sesuai"
+            },
+            {
+                id: 37,
+                kategori: "PROFESIONALISME",
+                text: "Sebagai ketua BEM, Wildan menetapkan target kerja minimal untuk keberhasilan program kerjanya. Sebagian besar pengurus mengeluh karena targetnya terlalu berat. Namun, Wildan juga harus memenuhi taerget kegiatan yang ditulis di proposal dan sudah disetujui oleh pihak kampus. Bagaimana seharusnya langkah yang ditempuh Wildan menghadapi kondisi tersebut",
+                options: [
+                    "Mempertahankan target kerja minimal karena ini sudah disetujui oleh pihak kampus.",
+                    "Hanya menerima masukan dari pengurus-pengurus yang dekat dengannya.",
+                    "Membuka forum diskusi untuk semua pengurus agar memperoleh masukan yang konstruktif.",
+                    "Melakukan pemantauan (monitoring) ke seluruh divisi untuk membantu mereka mencapai target kerja minimalnya.",
+                    "Mengajak semua pengurus untuk memetakan kembali target kinerja minimal divisinya."
+                ],
+                scores: [2, 1, 4, 5, 3],
+                pembahasan: "Pilihlah jawaban yang mampu melaksanakan tugas sesuai fungsi dan tuntutan jabatan. Target kerja pengurus BEM sangat berat dan beberapa pengurusnya mengeluh. Sebagai ketua, anda harus optimis, memiliki strategi, dan saling membantu dalam mencapai target yang disepakati. Pilihan D sangat sesuai"
+            },
+            {
+                id: 38,
+                kategori: "PROFESIONALISME",
+                text: "Sigit menilai atasanya otoriter. Sikap otorier ini ditunjukkan dengan tidak mendengarkan bawahan dan hanya memerintah. Atasan ini mengatakan bahwa kesuksesannya merupakan hasil didikan budaya otoriter, seperti ia dulu dibesarkan. Sebagai rekan kerja apa tindakan anda",
+                options: [
+                    "Mengajak Sigit berdiskusi tentang gaya kepemimpinan dan melihat sisi positif dan negatif dari tiap-tiap gaya.",
+                    "Megajak Sigit mengevaluasi sikap atasan dan mencoba memahami hak-hal positif dari sikap atasan.",
+                    "Mengusulkan agar Sigit mengajak rekan-rekan kerja lainnya untuk melakukan audiensi dengan atasan.",
+                    "Meminta Sigit untuk tidak menghiraukan sikap atasan sebaiknya fokus pada pekerjaan.",
+                    "Menemani Sigit menemui atasannya untuk menjalankan permasalahan jika ada permintaan dari Sigit."
+                ],
+                scores: [4, 5, 1, 3, 2],
+                pembahasan: "Pilihlah jawaban yang mampu mengajak rekan kerja untuk memandang gaya kepemimpinan orotiter memiliki sisi positif. Hal ini bertujuan untuk menjaga iklim perusahaan agar sesama rekan kerja dapat menghormati atasan. Pilihan B sangat sesuai"
+            },
+            {
+                id: 39,
+                kategori: "ANTI RADIKALISME",
+                text: "Pak Dodi berbeda agama dengan pimpinan kantornya. Ia mendapat undangan pernikahan dari pimpinan kantor yang akan diselenggarakan di rumah ibadah. Bagaimana sebaiknya sikap Pak Dodi",
+                options: [
+                    "Meminta maaf kepada pimpinan karena tidak dapat menghadiri undangan.",
+                    "Menghormati undangan tersebut dengan mendatangi rumah pimpinan secara pribadi.",
+                    "Tetap hadir dan memilih berada di luar rumah ibadah.",
+                    "Memperluas wawasan mengenai hukum mengunjungi rumah ibadah agama lain.",
+                    "Diam-diam menghadiri undangan tersebut."
+                ],
+                scores: [1, 5, 4, 3, 2],
+                pembahasan: "Pilihlah jawaban yang mampu menunjukkan sikap toleransi. Undangan pernikahan dari atasannya harus ditanggapi dengan baik yang berarti anda mengupayakan hadir di acara tersebut. Karena lokasi pernikahan dilaksanakan di rumah ibadah, berpotensi terjadi perbedaan pandangan dalam hal beragama. Upaya yang terbaik bisa dilakukan dengan mendatangi kediaman pimpinan sebagai wujud penghormatan atas undagan dari atasan anda."
+            },
+            {
+                id: 40,
+                kategori: "ANTI RADIKALISME",
+                text: "Dalam suatu pemilihan ketua organisasi, para kandidat mempresentasikan suatu program. Seorang kandidat yang berbeda agama dengan anda menyampaikan program yang konkret untuk dilaksanakan. Kandidat lain yang seagama dengan anda mempresentasikan program yang kurang aplikatif. Apa yang seharusnya anda lakukan",
+                options: [
+                    "Jarang bekerja sama dengan orang yang berbeda agama meskipun orang tersebut memiliki program yang baik.",
+                    "Memilih bekerja sama dengan kandidat yang seagama karena dapat saling memahami.",
+                    "Bersedia bekerja sama dengan kandidat terpilih tanpa memandang latar belakang agamannya.",
+                    "Bersedia bekerja sama dengan kandidat yang berbeda agama jika memiliki visi kerja yang sama.",
+                    "Mengajak teman-teman di organisasi untuk mendukung program kandidat terpilih tanpa memandang agama."
+                ],
+                scores: [2, 1, 4, 3, 5],
+                pembahasan: "Pilihlah jawaban yang bersikap dan bertindak netral dalam menentukan pilihan tanpa memandang latar belakang. Pilihan E menunjukkan upaya lebih dengan mengajak teman-temannya dapat mendukung program yang bagus tanpa memandang agama karena demi kepentingan organisasi"
+            },
+            {
+                id: 41,
+                kategori: "ANTI RADIKALISME",
+                text: "Melly ditunjuk sebagai koordinator di kantornya. Masalahnya, Melly tidak punya banyak teman di kantor karena berasal dari agama dan suku minoritas. Diterimanya Melly sebagai pegawai di kantor juga mengalami pro dan kontra. Sebagai salah satu karyawan di kantor tersebut, apa yang akan anda lakukan ...",
+                options: [
+                    "Saya tidak mau melibatkan diri dalam urusan yang sensitif di kantor.",
+                    "Saya meminta penjelasan kepada atasan mengapa Melly harus menjadi koordinator.",
+                    "Saya mendukung kepemimpinan Melly untuk kepentingan kantor.",
+                    "Saya memprotes atasan atas penunjukkan posisi Melly di kantor.",
+                    "Saya mencari tahu alasan mengapa Melly ditunjuk sebagai koordinator."
+                ],
+                scores: [4, 2, 5, 1, 3],
+                pembahasan: "Pilihlah jawaban yang mampu menerima keputusan atasan dan tidak terlibat dalam kontroversi penerimaan Melly sebagai pegawai kantor sekaligus menjadi coordinator di kantornya. Pilihan C sangat sesuai"
+            },
+            {
+                id: 42,
+                kategori: "ANTI RADIKALISME",
+                text: "Pak Lalu, merupakan tokoh masyarakat di daerahnya, mendengar banyak informasi yang begitu viral di media massa tentang tindak korupsi yang dilakukan kepala daerahnya. Bagaimana tindakan Pak Lalu",
+                options: [
+                    "Menikmati perkembangan informasi yang muncul di medsos yang begitu provokatif antara pendukung dan lawan politik kepala daerah.",
+                    "Mengolah informasi yang dianggap relevan untuk dijadikan bahan agar DPRD setempat melakukan impeachment kepada kepala daerah.",
+                    "Mengolah dan memilah informasi berdasarkan sumber dan viliditas data: mana yang berpotensi menimbulkan kekerasan dan konplik.",
+                    "Mencari informasi yang akurat dari berbagai sumber agar posisi kepala daerah menjadi jelas di mata hukum sehingga tidak mengganggu roda pemerintahan.",
+                    "Mengajak semua pihak untuk tidak mudah percaya balikan mengunggah (memosting) ulang informasi di medsos dan menyosialisasikan akses-akses informasi yang akurat."
+                ],
+                scores: [1, 2, 3, 4, 5],
+                pembahasan: "Pilihlah jawaban yang bersikap dan bertindak sesuai peran dan memahami UUD yang berlaku. Apabila terdapat dugaan kasus korupsi, ada lembaga yang memiliki wewenang untuk mengurus kasus tersebut. Namun, anda juga perlu mengolah informasi itu agar bisa memahami keadaan yang terjadi. Hal yang baik dilakukan ialah mencegah masyarakat agar tidak memposting hal-hal yang memicu konflik atau menyebar berita yang belum tentu benar di mata hukum karena blm ada putusan. Pilihan E sangat sesuai"
+            },
+            {
+                id: 43,
+                kategori: "ANTI RADIKALISME",
+                text: "Sebuah bentrokan terjadi antara anggota pengikut kepercayaan dan organisasi kepemudaan yang menggangu ketertiban di suatu wilayah. Sebagai anggota masyarakat di wilayah tersebut, apa yang dapat anda lakukan",
+                options: [
+                    "Saya mendukung salah satu pihak karena masih merupakan anggota kelompok.",
+                    "Saya melaporkan kedua belah pihak kepada pihak yang berwajib.",
+                    "Saya berdiskusi dengan berbagai pihak agar bentrokan tidak berlanjut.",
+                    "Saya meminta kedua belah pihak untuk mendinginkan kepala menghentikan bentrokan.",
+                    "Saya mengajak semua pihak di wilayah tersebut untuk melakukan dialog bersama untuk menyelesaikan persoalan yang terjadi."
+                ],
+                scores: [1, 5, 2, 3, 4],
+                pembahasan: "Pilihlah jawaban yang menjunjung tinggi perdamaian dan memahami UUD yang berlaku. Ketika bentrokan terjadi, situasi ini sulit untuk anda selesaikan. Secara aturan, anda cukup melaporkan kejadian tersebut kepada pihak yang berwajib. Pilihan B sangat sesuai"
+            },
+            {
+                id: 44,
+                kategori: "ANTI RADIKALISME",
+                text: "Anda mendapat informasi bahwa anak dari salah satu tetangga menjadi pengedar narkoba. Namun, warga setempat tidak berbuat apa-apa karena tetangga Anda adalah salah satu tokoh masyarakat setempat. Apa yang akan Anda lakukan ...",
+                options: [
+                    "Saya akan memimpin warga untuk melakukan penggerebekan rumah tersebut.",
+                    "Saya akan mengusulkan untuk membawa anak itu ke pusat rehabilitas narkoba.",
+                    "Saya akan meminta tetangga untuk menyerahkan anaknya ke polisi.",
+                    "Bersama warga setempat, saya akan memasang spanduk-spanduk antinarkoba.",
+                    "Saya akan mengusulkan untuk memberikan penyuluhan kepada para remaja tentang dampak narkoba."
+                ],
+                scores: [1, 2, 5, 4, 3],
+                pembahasan: "Pilihlah jawaban yang mampu berperan dalam kedudun / jabatan anda dan sesuai peraturan UUD. Memimpin penggerebekan dan mengusulkan untuk masuk di rehabilitasi termasuk tindakan yang keliru. Untuk tindakan yang memberikan edukasi kepada warga termasuk kegiatan bagus namun tidak menjawab pertanyaan dalam soal. Pilihan D sangat sesuai"
+            },
+            {
+                id: 45,
+                kategori: "ANTI RADIKALISME",
+                text: "Pak rusman merupakan seorang tokoh agama yang banyak pengikutnya. Namun, akhir-akhir ini beliau diisukan melakukan pengimpangan ajaran agama, padahal masyarakat sekitar justru merasakan kenyamanan dan kedamaian dalam hidup bermasyarakat dengan Pak Rusman. Sebagai warga apa tindakan anda",
+                options: [
+                    "Tanpa mencari kebenaran info, saya menyayangkan perilaku Pak Rusman yang merusak nama baik agama.",
+                    "Cukup memahami bahwa Pak Rusman sedang mendapatkan ujian yang harus diselesaikan secara damai.",
+                    "Memiliki keinginan untuk mencari kebenaran masalah agar Pak Rusman dapat menjalankan dakwahnya kembali.",
+                    "Termotivasi untuk mempertahankan ajaran cinta damai Pak Rusman sehingga masalahnya harus segera diselesaikan.",
+                    "Menyakinkan semua orang bahwa ajaran Pak Rusman adalah ajaran agama yang benar yang penuh cinta damai."
+                ],
+                scores: [1, 3, 2, 4, 5],
+                pembahasan: "Pilihlah jawaban yang bertindak sesuai aturan dan membuat lingkungan yang kondusif. Pak Rusman mendapat isu telah melakukan penyimpangan Agama. Kondisi ini bisa membuat citra Pak Rusman turun dan membuat beberapa orang kecewa dengan Pak Rusman. Anda sebaiknya bisa menyebarkan kabar tentang kebenaran Pak Rusman. Pilihan E sangat sesuai"
+            }
+        ];
+
+        // State Aplikasi
+        let currentIdx = 0;
+        let userAnswers = {}; // { indexSoal: opsiIndex }
+        let raguState = {};   // { indexSoal: boolean }
+        let timeRemaining = 35 * 60; // 35 Menit dalam Detik
+        let timerInterval = null;
+
+        // Start Ujian
+        function startExam(e) {
+            e.preventDefault();
+            const nama = document.getElementById('input-nama').value;
+            document.getElementById('display-nama').innerText = "Peserta: " + nama;
+            document.getElementById('result-nama').innerText = "Nama Peserta: " + nama;
+            
+            // Sembunyikan Modal Login
+            document.getElementById('login-page').classList.add('hidden');
+            
+            // Render Soal dan Timer
+            renderQuestion();
+            renderQuestionNumbers();
+            startTimer();
+        }
+
+        // Render Soal Aktif
+        function renderQuestion() {
+            const q = questions[currentIdx];
+            document.getElementById('label-no-soal').innerText = `Soal No. ${currentIdx + 1}`;
+            document.getElementById('label-kategori').innerText = q.kategori;
+            document.getElementById('teks-soal').innerText = q.text;
+
+            const containerOpsi = document.getElementById('container-opsi');
+            containerOpsi.innerHTML = '';
+
+            const alphabet = ['A', 'B', 'C', 'D', 'E'];
+
+            q.options.forEach((opt, idx) => {
+                const isSelected = userAnswers[currentIdx] === idx;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => selectAnswer(idx);
+                btn.className = `w-full text-left p-3.5 rounded-lg border text-sm sm:text-base transition-all flex items-start gap-3 ${
+                    isSelected 
+                        ? 'border-sky-600 bg-sky-50 text-sky-900 font-medium ring-2 ring-sky-500/20' 
+                        : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+                }`;
+
+                btn.innerHTML = `
+                    <span class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
+                        isSelected ? 'bg-sky-600 text-white' : 'bg-gray-100 text-gray-600'
+                    }">${alphabet[idx]}</span>
+                    <span class="mt-0.5">${opt}</span>
+                `;
+                containerOpsi.appendChild(btn);
+            });
+
+            // Update Status Ragu
+            document.getElementById('check-ragu').checked = !!raguState[currentIdx];
+
+            // Update Navigasi Tombol
+            document.getElementById('btn-prev').disabled = currentIdx === 0;
+            document.getElementById('btn-prev').classList.toggle('opacity-50', currentIdx === 0);
+            
+            const btnNext = document.getElementById('btn-next');
+            if (currentIdx === questions.length - 1) {
+                btnNext.innerText = 'Selesai Ujian';
+                btnNext.className = 'flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow transition';
+            } else {
+                btnNext.innerText = 'Soal Berikutnya »';
+                btnNext.className = 'flex-1 sm:flex-none px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-medium text-sm rounded-lg shadow transition';
+            }
+
+            // Reproses MathJax untuk notasi matematika (jika ada)
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        // Simpan Jawaban
+        function selectAnswer(optIdx) {
+            userAnswers[currentIdx] = optIdx;
+            renderQuestion();
+            renderQuestionNumbers();
+        }
+
+        // Toggle Status Ragu-ragu
+        function toggleRagu() {
+            raguState[currentIdx] = !raguState[currentIdx];
+            renderQuestion();
+            renderQuestionNumbers();
+        }
+
+        // Pindah Soal
+        function changeQuestion(dir) {
+            const nextIdx = currentIdx + dir;
+            if (nextIdx >= 0 && nextIdx < questions.length) {
+                currentIdx = nextIdx;
+                renderQuestion();
+                renderQuestionNumbers();
+            }
+        }
+
+        // Handle Klik Tombol Next / Selesai
+        function handleNextOrFinish() {
+            if (currentIdx === questions.length - 1) {
+                finishExam();
+            } else {
+                changeQuestion(1);
+            }
+        }
+
+        // Jump Direct Ke Nomor Soal
+        function jumpToQuestion(idx) {
+            currentIdx = idx;
+            renderQuestion();
+            renderQuestionNumbers();
+        }
+
+        // Render Panel Nomor Soal (Statis & Responsif)
+        function renderQuestionNumbers() {
+            const grid = document.getElementById('grid-nomor');
+            grid.innerHTML = '';
+
+            questions.forEach((_, idx) => {
+                const isCurrent = idx === currentIdx;
+                const isAnswered = userAnswers.hasOwnProperty(idx);
+                const isRagu = !!raguState[idx];
+
+                let bgClass = "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+                
+                if (isRagu) {
+                    bgClass = "bg-yellow-400 text-yellow-950 border-yellow-500 font-bold";
+                } else if (isAnswered) {
+                    bgClass = "bg-emerald-500 text-white border-emerald-600 font-bold";
+                }
+
+                const borderActive = isCurrent ? "ring-2 ring-offset-2 ring-sky-600" : "";
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => jumpToQuestion(idx);
+                btn.className = `h-10 rounded-md border text-xs sm:text-sm font-semibold flex items-center justify-center transition-all ${bgClass} ${borderActive}`;
+                btn.innerText = idx + 1;
+
+                grid.appendChild(btn);
+            });
+        }
+
+        // Countdown Timer Logic (35 Menit)
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                
+                document.getElementById('timer').innerText = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Waktu pengerjaan ujian telah selesai!");
+                    finishExam(true);
+                }
+            }, 1000);
+        }
+
+        // Selesai Ujian & Tampilkan Hasil + Koreksi
+        function finishExam(auto = false) {
+            if (!auto) {
+                const confirmed = confirm("Apakah Anda yakin ingin mengakhiri ujian ini dan melihat skor akhir?");
+                if (!confirmed) return;
+            }
+
+            clearInterval(timerInterval);
+
+            // Sembunyikan Tampilan Ujian Utama
+            document.getElementById('main-exam').classList.add('hidden');
+            
+            // Hitung Skor Bertingkat (Likert 5-1)
+            let totalScore = 0;
+            let countAnswered = 0;
+
+            const alphabet = ['A', 'B', 'C', 'D', 'E'];
+            const containerPembahasan = document.getElementById('pembahasan-container');
+            containerPembahasan.innerHTML = '';
+
+            questions.forEach((q, idx) => {
+                const chosenIdx = userAnswers[idx];
+                let scoreEarned = 0;
+
+                if (chosenIdx !== undefined) {
+                    scoreEarned = q.scores[chosenIdx];
+                    totalScore += scoreEarned;
+                    countAnswered++;
+                }
+
+                // Render Card Koreksi Soal
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-3";
+                
+                let answerDetail = '';
+                q.options.forEach((opt, oIdx) => {
+                    const isUserChoice = chosenIdx === oIdx;
+                    const optScore = q.scores[oIdx];
+                    
+                    let bgOpt = "bg-gray-50 border-gray-200 text-gray-700";
+                    if (optScore === 5) {
+                        bgOpt = "bg-emerald-50 border-emerald-300 text-emerald-900 font-medium";
+                    }
+                    if (isUserChoice) {
+                        bgOpt += " ring-2 ring-sky-500 font-bold";
+                    }
+
+                    answerDetail += `
+                        <div class="p-2.5 rounded-lg border text-xs sm:text-sm flex justify-between items-center ${bgOpt}">
+                            <span><b>${alphabet[oIdx]}.</b> ${opt} ${isUserChoice ? '<span class="ml-2 text-sky-700 font-bold">(Pilihan Anda)</span>' : ''}</span>
+                            <span class="px-2 py-0.5 bg-white border rounded text-xs font-bold text-gray-700 shadow-sm ml-2">Poin: ${optScore}</span>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                        <span class="font-bold text-gray-800 text-sm sm:text-base">No. ${idx + 1} (${q.kategori})</span>
+                        <span class="text-xs font-bold px-2.5 py-1 rounded ${scoreEarned > 0 ? 'bg-sky-100 text-sky-800' : 'bg-rose-100 text-rose-800'}">
+                            Poin Diperoleh: ${scoreEarned}
+                        </span>
+                    </div>
+                    <p class="text-gray-800 text-sm leading-relaxed">${q.text}</p>
+                    <div class="space-y-2 mt-3">
+                        ${answerDetail}
+                    </div>
+                    <div class="mt-4 p-3.5 bg-sky-50 rounded-lg border border-sky-100 text-xs sm:text-sm text-sky-950 leading-relaxed">
+                        <b class="text-sky-900 block mb-1">Pembahasan:</b>
+                        ${q.pembahasan}
+                    </div>
+                `;
+
+                containerPembahasan.appendChild(card);
+            });
+
+            // Set Data Skor Ringkasan
+            document.getElementById('total-score').innerText = totalScore;
+            document.getElementById('count-answered').innerText = countAnswered;
+            document.getElementById('count-empty').innerText = questions.length - countAnswered;
+
+            // Tampilkan Halaman Hasil
+            document.getElementById('result-page').classList.remove('hidden');
+
+            // Render Ulang MathJax untuk area pembahasan
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise();
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
